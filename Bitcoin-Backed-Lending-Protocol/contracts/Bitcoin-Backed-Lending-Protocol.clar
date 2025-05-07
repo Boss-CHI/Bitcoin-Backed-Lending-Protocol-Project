@@ -264,3 +264,22 @@
   }
 )
 
+(define-map governance-votes
+  { proposal-id: uint, voter: principal }
+  {
+    vote-amount: uint,
+    vote-direction: bool, ;; true for yes, false for no
+    vote-block-height: uint
+  }
+)
+
+(define-map referral-program
+  { referrer: principal }
+  {
+    total-referrals: uint,
+    total-volume: uint,
+    total-rewards: uint,
+    last-claim-block-height: uint
+  }
+)
+
