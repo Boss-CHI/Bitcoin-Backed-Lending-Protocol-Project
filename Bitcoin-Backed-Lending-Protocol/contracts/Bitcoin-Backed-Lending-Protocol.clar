@@ -103,3 +103,26 @@
     (is-eq caller (var-get liquidator-contract))
   )
 )
+
+;; Add or update interest rate model
+(define-public (set-interest-rate-model (model-id (string-ascii 10))
+                                        (base-rate uint)
+                                        (rate-multiplier uint)
+                                        (optimal-utilization uint)
+                                        (excess-multiplier uint))
+  (begin
+    (asserts! (is-contract-owner) (err ERR_UNAUTHORIZED))
+    (asserts! (<= base-rate u10000) (err ERR_INVALID_PARAMETER)) 
+    (asserts! (<= optimal-utilization u10000) (err ERR_INVALID_PARAMETER))
+    
+    (map-set interest-rate-models
+      { model-id: model-id }
+      {
+        base-rate: base-rate,
+        rate-multiplier: rate-multiplier,
+        optimal-utilization: optimal-utilization,
+        excess-multiplier: excess-multiplier
+      })
+    (ok true)
+  )
+)
