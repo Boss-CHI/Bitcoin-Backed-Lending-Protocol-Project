@@ -30,3 +30,19 @@
     last-update-block-height: uint
   }
 )
+
+(define-map supported-tokens
+  { token-id: uint }
+  {
+    token-contract: principal,
+    token-name: (string-ascii 32),
+    ltv-ratio: uint, ;; Loan-to-Value ratio (base 10000)
+    liquidation-threshold: uint, ;; Liquidation threshold (base 10000)
+    is-collateral: bool,
+    is-borrowable: bool,
+    total-supplied: uint,
+    total-borrowed: uint,
+    reserve-factor: uint, ;; Percentage of interest that goes to reserves (base 10000)
+    interest-rate-model: (string-ascii 10) ;; Reference to interest rate model (linear, jump-rate, etc.)
+  }
+)
