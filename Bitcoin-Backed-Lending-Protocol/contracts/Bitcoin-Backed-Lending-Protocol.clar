@@ -83,3 +83,23 @@
   { token-id: uint }
   { amount: uint }
 )
+
+;; Data variables
+(define-data-var protocol-paused bool false)
+(define-data-var oracle-contract principal 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
+(define-data-var treasury-address principal 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
+(define-data-var liquidator-contract principal 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
+(define-data-var token-counter uint u0)
+
+;; Private functions
+(define-private (is-contract-owner)
+  (is-eq tx-sender CONTRACT_OWNER)
+)
+
+(define-private (is-authorized-contract (caller principal))
+  (or
+    (is-eq caller CONTRACT_OWNER)
+    (is-eq caller (var-get oracle-contract))
+    (is-eq caller (var-get liquidator-contract))
+  )
+)
