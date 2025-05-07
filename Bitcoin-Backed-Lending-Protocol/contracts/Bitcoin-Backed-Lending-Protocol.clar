@@ -283,3 +283,27 @@
   }
 )
 
+(define-map user-referrals
+  { user: principal }
+  { referrer: principal }
+)
+
+(define-map token-asset-caps
+  { token-id: uint }
+  {
+    supply-cap: uint,
+    borrow-cap: uint,
+    individual-supply-cap: uint,
+    individual-borrow-cap: uint
+  }
+)
+
+(define-map cross-chain-bridges
+  { chain-id: uint }
+  {
+    bridge-address: (buff 32),
+    liquidity-available: uint,
+    is-active: bool,
+    confirmations-required: uint
+  }
+)
