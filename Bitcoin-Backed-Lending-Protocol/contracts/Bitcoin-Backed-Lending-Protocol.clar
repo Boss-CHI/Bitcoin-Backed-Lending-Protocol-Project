@@ -164,3 +164,29 @@
 (define-data-var emergency-admin principal 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
 (define-data-var staking-reward-rate uint u10) ;; 0.1% per block (base 10000)
 (define-data-var referral-bonus-percentage uint u200) ;; 2% bonus (base 10000)
+
+;; NEW PRIVATE FUNCTIONS
+(define-private (is-emergency-admin)
+  (is-eq tx-sender (var-get emergency-admin))
+)
+
+(define-private (calculate-flash-loan-fee (amount uint))
+  (/ (* amount FLASH_LOAN_FEE_PERCENTAGE) u10000)
+)
+
+(define-private (get-token-contract (token-id uint))
+  (get token-contract (default-to 
+    { 
+      token-contract: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM,
+      token-name: "",
+      ltv-ratio: u0,
+      liquidation-threshold: u0,
+      is-collateral: false,
+      is-borrowable: false,
+      total-supplied: u0,
+      total-borrowed: u0,
+      reserve-factor: u0,
+      interest-rate-model: ""
+    }
+    (map-get? supported-tokens { token-id: token-id })))
+)
