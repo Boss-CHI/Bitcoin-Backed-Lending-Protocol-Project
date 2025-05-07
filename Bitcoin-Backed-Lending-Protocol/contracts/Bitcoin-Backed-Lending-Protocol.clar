@@ -156,3 +156,11 @@
 (define-constant GOVERNANCE_VOTING_PERIOD_BLOCKS u1008) ;; ~7 days voting period
 (define-constant MIN_PROPOSAL_THRESHOLD u100000000) ;; Minimum token amount to create proposal
 (define-constant QUORUM_THRESHOLD u400000000) ;; Minimum votes for a proposal to pass (40%)
+
+;; NEW DATA VARIABLES
+(define-data-var flash-loan-counter uint u0)
+(define-data-var governance-proposal-counter uint u0)
+(define-data-var governance-token-id uint u0)
+(define-data-var emergency-admin principal 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
+(define-data-var staking-reward-rate uint u10) ;; 0.1% per block (base 10000)
+(define-data-var referral-bonus-percentage uint u200) ;; 2% bonus (base 10000)
