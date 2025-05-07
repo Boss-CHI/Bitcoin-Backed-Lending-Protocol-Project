@@ -46,3 +46,13 @@
     interest-rate-model: (string-ascii 10) ;; Reference to interest rate model (linear, jump-rate, etc.)
   }
 )
+
+(define-map interest-rate-models
+  { model-id: (string-ascii 10) }
+  {
+    base-rate: uint, ;; Base interest rate (base 10000)
+    rate-multiplier: uint, ;; Rate multiplier for utilization (base 10000)
+    optimal-utilization: uint, ;; Optimal utilization point (base 10000)
+    excess-multiplier: uint ;; Multiplier for rates above optimal utilization (base 10000)
+  }
+)
