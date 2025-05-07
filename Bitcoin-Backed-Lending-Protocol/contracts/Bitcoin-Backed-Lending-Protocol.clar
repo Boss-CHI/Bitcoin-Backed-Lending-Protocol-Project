@@ -307,3 +307,45 @@
     confirmations-required: uint
   }
 )
+
+
+(define-map credit-delegations
+  { delegator: principal, token-id: uint, delegatee: principal }
+  {
+    amount: uint,
+    expiry-block-height: uint,
+    interest-rate-premium: uint ;; Additional interest rate premium (base 10000)
+  }
+)
+
+;; NEW DATA VARIABLES
+(define-data-var safety-module-token-id uint u0)
+(define-data-var rewards-distributor-contract principal 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
+(define-data-var stable-swap-contract principal 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
+(define-data-var default-bridge-connector principal 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
+(define-data-var cross-chain-bridge-counter uint u0)
+(define-data-var last-rewards-distribution-block uint u0)
+(define-data-var global-reward-index uint u100000000) ;; Start at 10^8
+
+;; NEW PRIVATE FUNCTIONS
+(define-private (calculate-safety-module-rewards (user principal))
+  (let (
+    (staking-data (default-to 
+      {
+        staked-amount: u0,
+        lock-until-block: u0,
+        reward-index: u0,
+        last-claim-block-height: u0
+      }
+      (map-get? safety-module-staking { user: user })
+    ))
+    (blocks-since-last-claim (- stacks-block-height (get last-claim-block-height staking-data)))
+    (reward-accrual-rate (var-get staking-reward-rate))
+    (staked-amount (get staked-amount staking-data))
+  )
+    (if (> staked-amount u0)
+      (/ (* (* blocks-since-last-claim reward-accrual-rate) staked-amount) u10000)
+      u0
+    )
+  )
+)
