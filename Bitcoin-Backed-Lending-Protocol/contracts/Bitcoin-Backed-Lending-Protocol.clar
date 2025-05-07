@@ -142,3 +142,17 @@
   )
 )
 
+;; NEW ERROR CODES
+(define-constant ERR_VAULT_NOT_FOUND u13)
+(define-constant ERR_FLASH_LOAN_NOT_REPAID u14)
+(define-constant ERR_WITHDRAWAL_COOL_DOWN u15)
+(define-constant ERR_GOVERNANCE_PROPOSAL_EXISTS u16)
+(define-constant ERR_GOVERNANCE_VOTE_ENDED u17)
+(define-constant ERR_ALREADY_VOTED u18)
+
+;; NEW PROTOCOL CONFIGURATIONS
+(define-constant FLASH_LOAN_FEE_PERCENTAGE u9) ;; 0.9% flash loan fee
+(define-constant WITHDRAWAL_COOL_DOWN_BLOCKS u36) ;; ~6 hours cool down period
+(define-constant GOVERNANCE_VOTING_PERIOD_BLOCKS u1008) ;; ~7 days voting period
+(define-constant MIN_PROPOSAL_THRESHOLD u100000000) ;; Minimum token amount to create proposal
+(define-constant QUORUM_THRESHOLD u400000000) ;; Minimum votes for a proposal to pass (40%)
