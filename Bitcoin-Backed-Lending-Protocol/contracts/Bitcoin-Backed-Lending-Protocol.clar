@@ -56,3 +56,17 @@
     excess-multiplier: uint ;; Multiplier for rates above optimal utilization (base 10000)
   }
 )
+
+(define-map price-oracle
+  { token-id: uint }
+  {
+    price: uint, ;; USD price with 8 decimals
+    last-update-time: uint,
+    source: (string-ascii 32)
+  }
+)
+
+(define-map protocol-state
+  { field: (string-ascii 32) }
+  { value: bool }
+)
