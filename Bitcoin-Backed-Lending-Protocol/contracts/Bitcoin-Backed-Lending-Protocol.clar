@@ -126,3 +126,19 @@
     (ok true)
   )
 )
+
+;; Update oracle price
+(define-public (update-price (token-id uint) (price uint) (source (string-ascii 32)))
+  (begin
+    (asserts! (is-authorized-contract tx-sender) (err ERR_UNAUTHORIZED))
+    (map-set price-oracle
+      { token-id: token-id }
+      { 
+        price: price, 
+        last-update-time: stacks-block-height, 
+        source: source 
+      })
+    (ok true)
+  )
+)
+
