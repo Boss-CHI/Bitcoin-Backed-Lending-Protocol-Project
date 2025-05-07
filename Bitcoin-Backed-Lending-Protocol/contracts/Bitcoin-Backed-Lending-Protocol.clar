@@ -190,3 +190,30 @@
     }
     (map-get? supported-tokens { token-id: token-id })))
 )
+
+;; Set emergency admin
+(define-public (set-emergency-admin (new-admin principal))
+  (begin
+    (asserts! (is-contract-owner) (err ERR_UNAUTHORIZED))
+    (var-set emergency-admin new-admin)
+    (ok true)
+  )
+)
+
+;; Emergency pause protocol
+(define-public (emergency-pause)
+  (begin
+    (asserts! (or (is-contract-owner) (is-emergency-admin)) (err ERR_UNAUTHORIZED))
+    (var-set protocol-paused true)
+    (ok true)
+  )
+)
+
+;; Emergency unpause protocol
+(define-public (emergency-unpause)
+  (begin
+    (asserts! (is-contract-owner) (err ERR_UNAUTHORIZED))
+    (var-set protocol-paused false)
+    (ok true)
+  )
+)
