@@ -70,3 +70,16 @@
   { field: (string-ascii 32) }
   { value: bool }
 )
+
+(define-map cumulative-interest-index
+  { token-id: uint }
+  {
+    index: uint, ;; Starts at 10^8
+    last-update-block-height: uint
+  }
+)
+
+(define-map protocol-reserves
+  { token-id: uint }
+  { amount: uint }
+)
