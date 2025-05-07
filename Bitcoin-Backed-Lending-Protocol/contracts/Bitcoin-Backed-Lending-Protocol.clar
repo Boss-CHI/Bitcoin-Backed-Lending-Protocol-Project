@@ -20,3 +20,13 @@
 (define-constant LIQUIDATION_THRESHOLD u15000) ;; 1.50 with 10000 as base
 (define-constant GRACE_PERIOD_BLOCKS u144) ;; ~24 hours (assuming 10 min block time)
 
+;; Data Maps
+(define-map user-vaults
+  { user: principal, token-id: uint }
+  {
+    collateral-amount: uint,
+    borrowed-amount: uint,
+    interest-index: uint,
+    last-update-block-height: uint
+  }
+)
