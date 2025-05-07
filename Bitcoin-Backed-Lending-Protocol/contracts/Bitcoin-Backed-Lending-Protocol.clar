@@ -190,3 +190,248 @@
     }
     (map-get? supported-tokens { token-id: token-id })))
 )
+
+;; Set emergency admin
+(define-public (set-emergency-admin (new-admin principal))
+  (begin
+    (asserts! (is-contract-owner) (err ERR_UNAUTHORIZED))
+    (var-set emergency-admin new-admin)
+    (ok true)
+  )
+)
+
+;; Emergency pause protocol
+(define-public (emergency-pause)
+  (begin
+    (asserts! (or (is-contract-owner) (is-emergency-admin)) (err ERR_UNAUTHORIZED))
+    (var-set protocol-paused true)
+    (ok true)
+  )
+)
+
+;; Emergency unpause protocol
+(define-public (emergency-unpause)
+  (begin
+    (asserts! (is-contract-owner) (err ERR_UNAUTHORIZED))
+    (var-set protocol-paused false)
+    (ok true)
+  )
+)
+
+
+;; NEW ERROR CODES
+(define-constant ERR_SAFETY_MODULE_LOCKED u19)
+(define-constant ERR_REWARDS_CLAIM_FAILED u20)
+(define-constant ERR_REFERRAL_ALREADY_REGISTERED u21)
+(define-constant ERR_INSUFFICIENT_STAKE u22)
+(define-constant ERR_BRIDGE_INSUFFICIENT_LIQUIDITY u23)
+(define-constant ERR_ZAPPING_FAILED u24)
+(define-constant ERR_ASSET_CAP_REACHED u25)
+(define-constant ERR_CREDIT_DELEGATION_LIMIT_EXCEEDED u26)
+
+(define-constant SAFETY_MODULE_LOCKUP_BLOCKS u4320) ;; ~30 days lockup period
+(define-constant REWARDS_DISTRIBUTION_FREQUENCY u144) ;; ~24 hours for rewards distribution
+(define-constant MAX_ASSET_CAP_PERCENTAGE u8000) ;; 80% of total supply as max cap (base 10000)
+(define-constant CROSS_CHAIN_BRIDGE_FEE u5) ;; 0.05% bridge fee (base 10000)
+(define-constant CREDIT_DELEGATION_MAX_RATIO u5000) ;; 50% of collateral can be delegated (base 10000)
+(define-constant ZAPPING_SLIPPAGE_TOLERANCE u100) ;; 1% slippage tolerance for zapping (base 10000)
+
+(define-map safety-module-staking
+  { user: principal }
+  {
+    staked-amount: uint,
+    lock-until-block: uint,
+    reward-index: uint,
+    last-claim-block-height: uint
+  }
+)
+
+(define-map governance-proposals
+  { proposal-id: uint }
+  {
+    proposer: principal,
+    title: (string-ascii 64),
+    description-hash: (buff 32),
+    start-block-height: uint,
+    end-block-height: uint,
+    execution-block-height: uint,
+    votes-for: uint,
+    votes-against: uint,
+    executed: bool,
+    target-contract: (optional principal),
+    function-to-call: (optional (string-ascii 128)),
+    function-args: (optional (list 10 (buff 256)))
+  }
+)
+
+(define-map governance-votes
+  { proposal-id: uint, voter: principal }
+  {
+    vote-amount: uint,
+    vote-direction: bool, ;; true for yes, false for no
+    vote-block-height: uint
+  }
+)
+
+(define-map referral-program
+  { referrer: principal }
+  {
+    total-referrals: uint,
+    total-volume: uint,
+    total-rewards: uint,
+    last-claim-block-height: uint
+  }
+)
+
+(define-map user-referrals
+  { user: principal }
+  { referrer: principal }
+)
+
+(define-map token-asset-caps
+  { token-id: uint }
+  {
+    supply-cap: uint,
+    borrow-cap: uint,
+    individual-supply-cap: uint,
+    individual-borrow-cap: uint
+  }
+)
+
+(define-map cross-chain-bridges
+  { chain-id: uint }
+  {
+    bridge-address: (buff 32),
+    liquidity-available: uint,
+    is-active: bool,
+    confirmations-required: uint
+  }
+)
+
+
+(define-map credit-delegations
+  { delegator: principal, token-id: uint, delegatee: principal }
+  {
+    amount: uint,
+    expiry-block-height: uint,
+    interest-rate-premium: uint ;; Additional interest rate premium (base 10000)
+  }
+)
+
+;; NEW DATA VARIABLES
+(define-data-var safety-module-token-id uint u0)
+(define-data-var rewards-distributor-contract principal 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
+(define-data-var stable-swap-contract principal 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
+(define-data-var default-bridge-connector principal 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM)
+(define-data-var cross-chain-bridge-counter uint u0)
+(define-data-var last-rewards-distribution-block uint u0)
+(define-data-var global-reward-index uint u100000000) ;; Start at 10^8
+
+;; NEW PRIVATE FUNCTIONS
+(define-private (calculate-safety-module-rewards (user principal))
+  (let (
+    (staking-data (default-to 
+      {
+        staked-amount: u0,
+        lock-until-block: u0,
+        reward-index: u0,
+        last-claim-block-height: u0
+      }
+      (map-get? safety-module-staking { user: user })
+    ))
+    (blocks-since-last-claim (- stacks-block-height (get last-claim-block-height staking-data)))
+    (reward-accrual-rate (var-get staking-reward-rate))
+    (staked-amount (get staked-amount staking-data))
+  )
+    (if (> staked-amount u0)
+      (/ (* (* blocks-since-last-claim reward-accrual-rate) staked-amount) u10000)
+      u0
+    )
+  )
+)
+
+(define-private (validate-governance-proposal (proposal-id uint))
+  (let (
+    (proposal (default-to
+      {
+        proposer: CONTRACT_OWNER,
+        title: "",
+        description-hash: 0x,
+        start-block-height: u0,
+        end-block-height: u0,
+        execution-block-height: u0,
+        votes-for: u0,
+        votes-against: u0,
+        executed: false,
+        target-contract: none,
+        function-to-call: none,
+        function-args: none
+      }
+      (map-get? governance-proposals { proposal-id: proposal-id })
+    ))
+  )
+    (and
+      (not (get executed proposal))
+      (<= stacks-block-height (get end-block-height proposal))
+      (>= stacks-block-height (get start-block-height proposal))
+    )
+  )
+)
+
+
+(define-private (calculate-cross-chain-bridge-fee (amount uint))
+  (/ (* amount CROSS_CHAIN_BRIDGE_FEE) u10000)
+)
+
+(define-private (check-asset-cap (token-id uint) (amount uint) (is-supply bool))
+  (let (
+    (token-caps (default-to
+      {
+        supply-cap: u0,
+        borrow-cap: u0,
+        individual-supply-cap: u0,
+        individual-borrow-cap: u0
+      }
+      (map-get? token-asset-caps { token-id: token-id })
+    ))
+    (token-data (default-to
+      {
+        token-contract: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM,
+        token-name: "",
+        ltv-ratio: u0,
+        liquidation-threshold: u0,
+        is-collateral: false,
+        is-borrowable: false,
+        total-supplied: u0,
+        total-borrowed: u0,
+        reserve-factor: u0,
+        interest-rate-model: ""
+      }
+      (map-get? supported-tokens { token-id: token-id })
+    ))
+    (user-vault (default-to
+      {
+        collateral-amount: u0,
+        borrowed-amount: u0,
+        interest-index: u0,
+        last-update-block-height: u0
+      }
+      (map-get? user-vaults { user: tx-sender, token-id: token-id })
+    ))
+  )
+    (if is-supply
+      (and
+        (or (is-eq (get supply-cap token-caps) u0)
+            (<= (+ (get total-supplied token-data) amount) (get supply-cap token-caps)))
+        (or (is-eq (get individual-supply-cap token-caps) u0)
+            (<= (+ (get collateral-amount user-vault) amount) (get individual-supply-cap token-caps)))
+      )
+      (and
+        (or (is-eq (get borrow-cap token-caps) u0)
+            (<= (+ (get total-borrowed token-data) amount) (get borrow-cap token-caps)))
+        (or (is-eq (get individual-borrow-cap token-caps) u0)
+            (<= (+ (get borrowed-amount user-vault) amount) (get individual-borrow-cap token-caps)))
+      )
+    )
+  )
+)
