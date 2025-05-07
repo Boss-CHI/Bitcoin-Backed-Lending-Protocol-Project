@@ -349,3 +349,89 @@
     )
   )
 )
+
+(define-private (validate-governance-proposal (proposal-id uint))
+  (let (
+    (proposal (default-to
+      {
+        proposer: CONTRACT_OWNER,
+        title: "",
+        description-hash: 0x,
+        start-block-height: u0,
+        end-block-height: u0,
+        execution-block-height: u0,
+        votes-for: u0,
+        votes-against: u0,
+        executed: false,
+        target-contract: none,
+        function-to-call: none,
+        function-args: none
+      }
+      (map-get? governance-proposals { proposal-id: proposal-id })
+    ))
+  )
+    (and
+      (not (get executed proposal))
+      (<= stacks-block-height (get end-block-height proposal))
+      (>= stacks-block-height (get start-block-height proposal))
+    )
+  )
+)
+
+
+(define-private (calculate-cross-chain-bridge-fee (amount uint))
+  (/ (* amount CROSS_CHAIN_BRIDGE_FEE) u10000)
+)
+
+(define-private (check-asset-cap (token-id uint) (amount uint) (is-supply bool))
+  (let (
+    (token-caps (default-to
+      {
+        supply-cap: u0,
+        borrow-cap: u0,
+        individual-supply-cap: u0,
+        individual-borrow-cap: u0
+      }
+      (map-get? token-asset-caps { token-id: token-id })
+    ))
+    (token-data (default-to
+      {
+        token-contract: 'ST1PQHQKV0RJXZFY1DGX8MNSNYVE3VGZJSRTPGZGM,
+        token-name: "",
+        ltv-ratio: u0,
+        liquidation-threshold: u0,
+        is-collateral: false,
+        is-borrowable: false,
+        total-supplied: u0,
+        total-borrowed: u0,
+        reserve-factor: u0,
+        interest-rate-model: ""
+      }
+      (map-get? supported-tokens { token-id: token-id })
+    ))
+    (user-vault (default-to
+      {
+        collateral-amount: u0,
+        borrowed-amount: u0,
+        interest-index: u0,
+        last-update-block-height: u0
+      }
+      (map-get? user-vaults { user: tx-sender, token-id: token-id })
+    ))
+  )
+    (if is-supply
+      (and
+        (or (is-eq (get supply-cap token-caps) u0)
+            (<= (+ (get total-supplied token-data) amount) (get supply-cap token-caps)))
+        (or (is-eq (get individual-supply-cap token-caps) u0)
+            (<= (+ (get collateral-amount user-vault) amount) (get individual-supply-cap token-caps)))
+      )
+      (and
+        (or (is-eq (get borrow-cap token-caps) u0)
+            (<= (+ (get total-borrowed token-data) amount) (get borrow-cap token-caps)))
+        (or (is-eq (get individual-borrow-cap token-caps) u0)
+            (<= (+ (get borrowed-amount user-vault) amount) (get individual-borrow-cap token-caps)))
+      )
+    )
+  )
+)
